@@ -2,3 +2,6 @@ go.sum
 .env
 main
 main.exe
+lastUpdate.txt
+substack_rss_discord
+substack_rss_discord.exe

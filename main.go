@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"fmt"
 )
 
 type DiscordMessage struct {
@@ -31,7 +32,7 @@ func main() {
 		lastUpdate, _ = time.Parse(time.RFC3339, string(loadData))
 	}
 
-	ticker := time.NewTicker(1 * time.Hour)
+	ticker := time.NewTicker(5 * time.Minute)
 	for {
 		select {
 		case <-ticker.C:
@@ -41,6 +42,7 @@ func main() {
 }
 
 func checkForUpdates() {
+	fmt.Println("Checking for updates")
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseURL(os.Getenv("SUBSTACK_RSS_URL"))
 	if err != nil {
@@ -48,10 +50,12 @@ func checkForUpdates() {
 		return
 	}
 
-	if feed.UpdatedParsed.After(lastUpdate) {
-		lastUpdate = *feed.UpdatedParsed
-		sendToDiscord("New content available on Substack!")
+	if len(feed.Items) > 0 && feed.Items[0].PublishedParsed.After(lastUpdate) {
+		lastUpdate = *feed.Items[0].PublishedParsed
+		message := "New content available on Substack: " + feed.Items[0].Title + " - " + feed.Items[0].Link
+		sendToDiscord(message)
 
+		// Save lastUpdate to file
 		ioutil.WriteFile(lastUpdateFile, []byte(lastUpdate.Format(time.RFC3339)), 0644)
 	}
 }
