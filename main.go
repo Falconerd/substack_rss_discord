@@ -52,7 +52,7 @@ func checkForUpdates() {
 
 	if len(feed.Items) > 0 && feed.Items[0].PublishedParsed.After(lastUpdate) {
 		lastUpdate = *feed.Items[0].PublishedParsed
-		message := "New content available on Substack: " + feed.Items[0].Title + " - " + feed.Items[0].Link
+		message := "@everyone: New article dropped on Substack: " + feed.Items[0].Title + " - " + feed.Items[0].Link
 		sendToDiscord(message)
 
 		// Save lastUpdate to file
