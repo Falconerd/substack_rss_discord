@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/joho/godotenv"
 	"github.com/mmcdole/gofeed"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -17,40 +18,42 @@ type DiscordMessage struct {
 
 var lastUpdate time.Time
 
+const lastUpdateFile = "lastUpdate.txt"
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
 
-	ticker := time.NewTicker(5 * time.Minute)
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				pollRSSHandler(nil, nil)
-			}
-		}
-	}()
+	loadData, err := ioutil.ReadFile(lastUpdateFile)
+	if err == nil {
+		lastUpdate, _ = time.Parse(time.RFC3339, string(loadData))
+	}
 
-	http.HandleFunc("/pollRSS", pollRSSHandler)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	ticker := time.NewTicker(1 * time.Hour)
+	for {
+		select {
+		case <-ticker.C:
+			checkForUpdates()
+		}
+	}
 }
 
-func pollRSSHandler(w http.ResponseWriter, r *http.Request) {
+func checkForUpdates() {
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseURL(os.Getenv("SUBSTACK_RSS_URL"))
 	if err != nil {
 		log.Printf("Error fetching RSS: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if feed.UpdatedParsed.After(lastUpdate) {
 		lastUpdate = *feed.UpdatedParsed
 		sendToDiscord("New content available on Substack!")
+
+		ioutil.WriteFile(lastUpdateFile, []byte(lastUpdate.Format(time.RFC3339)), 0644)
 	}
-	w.Write([]byte("Checked RSS feed!"))
 }
 
 func sendToDiscord(content string) {
