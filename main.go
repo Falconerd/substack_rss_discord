@@ -18,11 +18,20 @@ type DiscordMessage struct {
 var lastUpdate time.Time
 
 func main() {
-	// Load environment variables from .env file
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+
+	ticker := time.NewTicker(5 * time.Minute)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				pollRSSHandler(nil, nil)
+			}
+		}
+	}()
 
 	http.HandleFunc("/pollRSS", pollRSSHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
